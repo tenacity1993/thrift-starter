@@ -1,0 +1,26 @@
+.App {
+  display: flex;
+  margin: auto;
+  flex-flow: column nowrap;
+}
+
+.name {
+  font-size: 14px;
+}
+
+.info-input input {
+  border: 1px solid #3fa07f;
+}
+
+.submit {
+  box-sizing: border-box;
+  align-self: center;
+  margin-top: 30px;
+  width: 40%;
+  height: 20px;
+  line-height: 20px;
+  font-size: 14px;
+  border: 1px solid rgba(201,74,65,0.8);
+  border-radius: 5px;
+  background: rgba(55, 201, 158, 0.3);
+}

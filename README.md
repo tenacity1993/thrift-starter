@@ -1,1 +1,1 @@
-# thrift-starter
+# thrift stater
