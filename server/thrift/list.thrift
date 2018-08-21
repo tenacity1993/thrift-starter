@@ -12,9 +12,5 @@ struct Data {
 service GetList {
 void ping()
 Data get()
-}
-
-service PostList {
-void ping()
 Data post(1: string name, 2: i16 age)
 }

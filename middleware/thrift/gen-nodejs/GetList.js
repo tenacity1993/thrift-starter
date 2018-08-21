@@ -151,6 +151,126 @@ GetList_get_result.prototype.write = function(output) {
   return;
 };
 
+var GetList_post_args = function(args) {
+  this.name = null;
+  this.age = null;
+  if (args) {
+    if (args.name !== undefined && args.name !== null) {
+      this.name = args.name;
+    }
+    if (args.age !== undefined && args.age !== null) {
+      this.age = args.age;
+    }
+  }
+};
+GetList_post_args.prototype = {};
+GetList_post_args.prototype.read = function(input) {
+  input.readStructBegin();
+  while (true)
+  {
+    var ret = input.readFieldBegin();
+    var fname = ret.fname;
+    var ftype = ret.ftype;
+    var fid = ret.fid;
+    if (ftype == Thrift.Type.STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+      if (ftype == Thrift.Type.STRING) {
+        this.name = input.readString();
+      } else {
+        input.skip(ftype);
+      }
+      break;
+      case 2:
+      if (ftype == Thrift.Type.I16) {
+        this.age = input.readI16();
+      } else {
+        input.skip(ftype);
+      }
+      break;
+      default:
+        input.skip(ftype);
+    }
+    input.readFieldEnd();
+  }
+  input.readStructEnd();
+  return;
+};
+
+GetList_post_args.prototype.write = function(output) {
+  output.writeStructBegin('GetList_post_args');
+  if (this.name !== null && this.name !== undefined) {
+    output.writeFieldBegin('name', Thrift.Type.STRING, 1);
+    output.writeString(this.name);
+    output.writeFieldEnd();
+  }
+  if (this.age !== null && this.age !== undefined) {
+    output.writeFieldBegin('age', Thrift.Type.I16, 2);
+    output.writeI16(this.age);
+    output.writeFieldEnd();
+  }
+  output.writeFieldStop();
+  output.writeStructEnd();
+  return;
+};
+
+var GetList_post_result = function(args) {
+  this.success = null;
+  if (args) {
+    if (args.success !== undefined && args.success !== null) {
+      this.success = new ttypes.Data(args.success);
+    }
+  }
+};
+GetList_post_result.prototype = {};
+GetList_post_result.prototype.read = function(input) {
+  input.readStructBegin();
+  while (true)
+  {
+    var ret = input.readFieldBegin();
+    var fname = ret.fname;
+    var ftype = ret.ftype;
+    var fid = ret.fid;
+    if (ftype == Thrift.Type.STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 0:
+      if (ftype == Thrift.Type.STRUCT) {
+        this.success = new ttypes.Data();
+        this.success.read(input);
+      } else {
+        input.skip(ftype);
+      }
+      break;
+      case 0:
+        input.skip(ftype);
+        break;
+      default:
+        input.skip(ftype);
+    }
+    input.readFieldEnd();
+  }
+  input.readStructEnd();
+  return;
+};
+
+GetList_post_result.prototype.write = function(output) {
+  output.writeStructBegin('GetList_post_result');
+  if (this.success !== null && this.success !== undefined) {
+    output.writeFieldBegin('success', Thrift.Type.STRUCT, 0);
+    this.success.write(output);
+    output.writeFieldEnd();
+  }
+  output.writeFieldStop();
+  output.writeStructEnd();
+  return;
+};
+
 var GetListClient = exports.Client = function(output, pClass) {
     this.output = output;
     this.pClass = pClass;
@@ -249,6 +369,56 @@ GetListClient.prototype.recv_get = function(input,mtype,rseqid) {
   }
   return callback('get failed: unknown result');
 };
+GetListClient.prototype.post = function(name, age, callback) {
+  this._seqid = this.new_seqid();
+  if (callback === undefined) {
+    var _defer = Q.defer();
+    this._reqs[this.seqid()] = function(error, result) {
+      if (error) {
+        _defer.reject(error);
+      } else {
+        _defer.resolve(result);
+      }
+    };
+    this.send_post(name, age);
+    return _defer.promise;
+  } else {
+    this._reqs[this.seqid()] = callback;
+    this.send_post(name, age);
+  }
+};
+
+GetListClient.prototype.send_post = function(name, age) {
+  var output = new this.pClass(this.output);
+  output.writeMessageBegin('post', Thrift.MessageType.CALL, this.seqid());
+  var params = {
+    name: name,
+    age: age
+  };
+  var args = new GetList_post_args(params);
+  args.write(output);
+  output.writeMessageEnd();
+  return this.output.flush();
+};
+
+GetListClient.prototype.recv_post = function(input,mtype,rseqid) {
+  var callback = this._reqs[rseqid] || function() {};
+  delete this._reqs[rseqid];
+  if (mtype == Thrift.MessageType.EXCEPTION) {
+    var x = new Thrift.TApplicationException();
+    x.read(input);
+    input.readMessageEnd();
+    return callback(x);
+  }
+  var result = new GetList_post_result();
+  result.read(input);
+  input.readMessageEnd();
+
+  if (null !== result.success) {
+    return callback(null, result.success);
+  }
+  return callback('post failed: unknown result');
+};
 var GetListProcessor = exports.Processor = function(handler) {
   this._handler = handler;
 }
@@ -333,6 +503,42 @@ GetListProcessor.prototype.process_get = function(seqid, input, output) {
       } else {
         result_obj = new Thrift.TApplicationException(Thrift.TApplicationExceptionType.UNKNOWN, err.message);
         output.writeMessageBegin("get", Thrift.MessageType.EXCEPTION, seqid);
+      }
+      result_obj.write(output);
+      output.writeMessageEnd();
+      output.flush();
+    });
+  }
+};
+GetListProcessor.prototype.process_post = function(seqid, input, output) {
+  var args = new GetList_post_args();
+  args.read(input);
+  input.readMessageEnd();
+  if (this._handler.post.length === 2) {
+    Q.fcall(this._handler.post.bind(this._handler), args.name, args.age)
+      .then(function(result) {
+        var result_obj = new GetList_post_result({success: result});
+        output.writeMessageBegin("post", Thrift.MessageType.REPLY, seqid);
+        result_obj.write(output);
+        output.writeMessageEnd();
+        output.flush();
+      }, function (err) {
+        var result;
+        result = new Thrift.TApplicationException(Thrift.TApplicationExceptionType.UNKNOWN, err.message);
+        output.writeMessageBegin("post", Thrift.MessageType.EXCEPTION, seqid);
+        result.write(output);
+        output.writeMessageEnd();
+        output.flush();
+      });
+  } else {
+    this._handler.post(args.name, args.age, function (err, result) {
+      var result_obj;
+      if ((err === null || typeof err === 'undefined')) {
+        result_obj = new GetList_post_result((err !== null || typeof err === 'undefined') ? err : {success: result});
+        output.writeMessageBegin("post", Thrift.MessageType.REPLY, seqid);
+      } else {
+        result_obj = new Thrift.TApplicationException(Thrift.TApplicationExceptionType.UNKNOWN, err.message);
+        output.writeMessageBegin("post", Thrift.MessageType.EXCEPTION, seqid);
       }
       result_obj.write(output);
       output.writeMessageEnd();

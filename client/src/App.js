@@ -57,8 +57,8 @@ class App extends Component {
 
 
   submitInfo() {
-    let name = this.refs.name.value
-    let age = this.refs.age.value
+    let name = this.refs.name.value || 'nobody'
+    let age = this.refs.age.value || 18
     let item = {name, age}
     this.postData(postDataUrl, item)
   }
